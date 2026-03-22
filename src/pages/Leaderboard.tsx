@@ -3,7 +3,9 @@ import { getPrefects, getDutyRecords } from '@/lib/store';
 import { Batch, Prefect, DutyRecord } from '@/lib/types';
 import { BatchBadge } from '@/components/BatchBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { exportToPDF, exportToExcel } from '@/lib/export';
+import { Trophy, FileDown, FileSpreadsheet } from 'lucide-react';
 
 interface LeaderboardEntry {
   prefect: Prefect;
