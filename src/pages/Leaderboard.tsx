@@ -3,7 +3,9 @@ import { getPrefects, getDutyRecords } from '@/lib/store';
 import { Batch, Prefect, DutyRecord } from '@/lib/types';
 import { BatchBadge } from '@/components/BatchBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { exportToPDF, exportToExcel } from '@/lib/export';
+import { Trophy, FileDown, FileSpreadsheet } from 'lucide-react';
 
 interface LeaderboardEntry {
   prefect: Prefect;
@@ -58,17 +60,49 @@ export default function Leaderboard() {
           <h1 className="text-3xl font-display font-bold tracking-tight">Leaderboard</h1>
           <p className="text-muted-foreground mt-1">Rankings by total points</p>
         </div>
-        <Select value={batchFilter} onValueChange={setBatchFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Batches</SelectItem>
-            <SelectItem value="Trainee">Trainee Prefects</SelectItem>
-            <SelectItem value="Assistant">Assistant Prefects</SelectItem>
-            <SelectItem value="Junior">Junior Prefects</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={batchFilter} onValueChange={setBatchFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Batches</SelectItem>
+              <SelectItem value="Trainee">Trainee Prefects</SelectItem>
+              <SelectItem value="Assistant">Assistant Prefects</SelectItem>
+              <SelectItem value="Junior">Junior Prefects</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="active:scale-[0.97]"
+            disabled={entries.length === 0}
+            onClick={() => {
+              const data = entries.map((e, i) => ({
+                rank: i + 1, name: e.prefect.name, prefectId: e.prefect.prefectId,
+                batch: e.prefect.batch, totalPoints: e.totalPoints, dutyCount: e.dutyCount, avgPoints: e.avgPoints,
+              }));
+              exportToPDF(data, batchFilter);
+            }}
+          >
+            <FileDown className="h-4 w-4 mr-1" /> PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="active:scale-[0.97]"
+            disabled={entries.length === 0}
+            onClick={() => {
+              const data = entries.map((e, i) => ({
+                rank: i + 1, name: e.prefect.name, prefectId: e.prefect.prefectId,
+                batch: e.prefect.batch, totalPoints: e.totalPoints, dutyCount: e.dutyCount, avgPoints: e.avgPoints,
+              }));
+              exportToExcel(data, batchFilter);
+            }}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
+          </Button>
+        </div>
       </div>
 
       {entries.length === 0 ? (
