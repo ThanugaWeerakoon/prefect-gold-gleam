@@ -26,10 +26,22 @@ export default function Dashboard() {
       .filter(x => x.prefect);
   }, [prefects, duties]);
 
+  const batchCounts = useMemo(() => ({
+    Trainee: prefects.filter(p => p.batch === 'Trainee').length,
+    Assistant: prefects.filter(p => p.batch === 'Assistant').length,
+    Junior: prefects.filter(p => p.batch === 'Junior').length,
+  }), [prefects]);
+
   const stats = [
     { label: 'Total Prefects', value: prefects.length, icon: Users, color: 'text-primary' },
     { label: 'Points Awarded', value: totalPoints.toLocaleString(), icon: Award, color: 'text-gold-dark' },
     { label: 'Duty Records', value: duties.length, icon: Trophy, color: 'text-maroon-light' },
+  ];
+
+  const batchStats = [
+    { label: 'Trainee Prefects', value: batchCounts.Trainee, accent: 'border-l-gray-400' },
+    { label: 'Assistant Prefects', value: batchCounts.Assistant, accent: 'border-l-silver' },
+    { label: 'Junior Prefects', value: batchCounts.Junior, accent: 'border-l-maroon' },
   ];
 
   return (

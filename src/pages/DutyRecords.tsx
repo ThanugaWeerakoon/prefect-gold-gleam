@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { getPrefects, getDutyRecords, addDutyRecord, deleteDutyRecord } from '@/lib/store';
-import { Prefect, DutyRecord, DutyType, ALL_DUTIES, DUTY_POINTS, DAILY_DUTIES, OCCASIONAL_DUTIES } from '@/lib/types';
+import { Prefect, DutyRecord, DutyType, DUTY_POINTS, DAILY_DUTIES, OCCASIONAL_DUTIES } from '@/lib/types';
 import { BatchBadge } from '@/components/BatchBadge';
 import { toast } from 'sonner';
 import { ClipboardList, Plus, Trash2 } from 'lucide-react';
@@ -13,7 +14,7 @@ export default function DutyRecords() {
   const [prefects, setPrefects] = useState<Prefect[]>([]);
   const [records, setRecords] = useState<DutyRecord[]>([]);
   const [selectedPrefect, setSelectedPrefect] = useState('');
-  const [selectedDuty, setSelectedDuty] = useState<DutyType | ''>('');
+  const [selectedDuties, setSelectedDuties] = useState<DutyType[]>([]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   const reload = () => {
@@ -28,23 +29,42 @@ export default function DutyRecords() {
     [records, selectedPrefect]
   );
 
+  const toggleDuty = (duty: DutyType) => {
+    setSelectedDuties(prev =>
+      prev.includes(duty) ? prev.filter(d => d !== duty) : [...prev, duty]
+    );
+  };
+
+  const selectAllDaily = () => {
+    const allSelected = DAILY_DUTIES.every(d => selectedDuties.includes(d));
+    if (allSelected) {
+      setSelectedDuties(prev => prev.filter(d => !DAILY_DUTIES.includes(d)));
+    } else {
+      setSelectedDuties(prev => [...new Set([...prev, ...DAILY_DUTIES])]);
+    }
+  };
+
+  const totalPreview = selectedDuties.reduce((s, d) => s + DUTY_POINTS[d], 0);
+
   const handleAdd = () => {
-    if (!selectedPrefect || !selectedDuty) {
-      toast.error('Select a prefect and duty type');
+    if (!selectedPrefect || selectedDuties.length === 0) {
+      toast.error('Select a prefect and at least one duty');
       return;
     }
 
-    addDutyRecord({
-      id: crypto.randomUUID(),
-      prefectId: selectedPrefect,
-      dutyType: selectedDuty,
-      points: DUTY_POINTS[selectedDuty],
-      date,
-      createdAt: new Date().toISOString(),
+    selectedDuties.forEach(duty => {
+      addDutyRecord({
+        id: crypto.randomUUID(),
+        prefectId: selectedPrefect,
+        dutyType: duty,
+        points: DUTY_POINTS[duty],
+        date,
+        createdAt: new Date().toISOString(),
+      });
     });
 
-    toast.success(`${selectedDuty} recorded — ${DUTY_POINTS[selectedDuty]} pts`);
-    setSelectedDuty('');
+    toast.success(`${selectedDuties.length} duties recorded — ${totalPreview} pts total`);
+    setSelectedDuties([]);
     reload();
   };
 
@@ -63,14 +83,13 @@ export default function DutyRecords() {
         <p className="text-muted-foreground mt-1">Record and manage prefect duties</p>
       </div>
 
-      {/* Select Prefect */}
       <div
         className="card-elevated p-6 space-y-5"
         style={{ animation: 'fade-up 0.6s cubic-bezier(0.16,1,0.3,1) 100ms forwards', opacity: 0 }}
       >
         <div className="space-y-2">
           <Label>Select Prefect</Label>
-          <Select value={selectedPrefect} onValueChange={setSelectedPrefect}>
+          <Select value={selectedPrefect} onValueChange={v => { setSelectedPrefect(v); setSelectedDuties([]); }}>
             <SelectTrigger>
               <SelectValue placeholder="Choose a prefect" />
             </SelectTrigger>
@@ -91,33 +110,81 @@ export default function DutyRecords() {
 
         {selectedPrefect && (
           <div className="space-y-4 pt-2 border-t border-border">
-            <h3 className="font-semibold pt-3">Add Duty</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Duty Type</Label>
-                <Select value={selectedDuty} onValueChange={v => setSelectedDuty(v as DutyType)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select duty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem disabled value="daily-header">— Daily Duties —</SelectItem>
-                    {DAILY_DUTIES.map(d => (
-                      <SelectItem key={d} value={d}>{d} ({DUTY_POINTS[d]} pts)</SelectItem>
-                    ))}
-                    <SelectItem disabled value="occ-header">— Occasional —</SelectItem>
-                    {OCCASIONAL_DUTIES.map(d => (
-                      <SelectItem key={d} value={d}>{d} ({DUTY_POINTS[d]} pts)</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="flex items-center justify-between pt-3">
+              <h3 className="font-semibold">Select Duties</h3>
+              <Button type="button" variant="outline" size="sm" onClick={selectAllDaily} className="text-xs active:scale-[0.97]">
+                {DAILY_DUTIES.every(d => selectedDuties.includes(d)) ? 'Deselect All Daily' : 'Select All Daily'}
+              </Button>
+            </div>
+
+            {/* Daily Duties */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider font-medium">Daily Duties</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {DAILY_DUTIES.map(duty => (
+                  <label
+                    key={duty}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                      selectedDuties.includes(duty)
+                        ? 'border-gold bg-gold/5 shadow-sm'
+                        : 'border-border bg-secondary/30 hover:bg-secondary/60'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={selectedDuties.includes(duty)}
+                      onCheckedChange={() => toggleDuty(duty)}
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{duty}</span>
+                    </div>
+                    <span className="text-xs font-bold text-gold-dark tabular-nums">{DUTY_POINTS[duty]} pts</span>
+                  </label>
+                ))}
               </div>
-              <div className="space-y-1.5">
+            </div>
+
+            {/* Occasional Duties */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider font-medium">Occasional</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {OCCASIONAL_DUTIES.map(duty => (
+                  <label
+                    key={duty}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                      selectedDuties.includes(duty)
+                        ? 'border-gold bg-gold/5 shadow-sm'
+                        : 'border-border bg-secondary/30 hover:bg-secondary/60'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={selectedDuties.includes(duty)}
+                      onCheckedChange={() => toggleDuty(duty)}
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{duty}</span>
+                    </div>
+                    <span className="text-xs font-bold text-gold-dark tabular-nums">{DUTY_POINTS[duty]} pts</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Date + Submit */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <div className="space-y-1.5 flex-1">
                 <Label className="text-xs">Date</Label>
                 <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
               </div>
               <div className="flex items-end">
-                <Button onClick={handleAdd} variant="gold" className="w-full active:scale-[0.97]">
-                  <Plus className="h-4 w-4 mr-1" /> Add
+                <Button
+                  onClick={handleAdd}
+                  variant="gold"
+                  className="w-full sm:w-auto active:scale-[0.97]"
+                  disabled={selectedDuties.length === 0}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add {selectedDuties.length > 0 ? `${selectedDuties.length} ${selectedDuties.length === 1 ? 'Duty' : 'Duties'}` : 'Duties'}
+                  {totalPreview > 0 && ` (${totalPreview} pts)`}
                 </Button>
               </div>
             </div>
