@@ -26,10 +26,22 @@ export default function Dashboard() {
       .filter(x => x.prefect);
   }, [prefects, duties]);
 
+  const batchCounts = useMemo(() => ({
+    Trainee: prefects.filter(p => p.batch === 'Trainee').length,
+    Assistant: prefects.filter(p => p.batch === 'Assistant').length,
+    Junior: prefects.filter(p => p.batch === 'Junior').length,
+  }), [prefects]);
+
   const stats = [
     { label: 'Total Prefects', value: prefects.length, icon: Users, color: 'text-primary' },
     { label: 'Points Awarded', value: totalPoints.toLocaleString(), icon: Award, color: 'text-gold-dark' },
     { label: 'Duty Records', value: duties.length, icon: Trophy, color: 'text-maroon-light' },
+  ];
+
+  const batchStats = [
+    { label: 'Trainee Prefects', value: batchCounts.Trainee, accent: 'border-l-gray-400' },
+    { label: 'Assistant Prefects', value: batchCounts.Assistant, accent: 'border-l-silver' },
+    { label: 'Junior Prefects', value: batchCounts.Junior, accent: 'border-l-maroon' },
   ];
 
   return (
@@ -56,6 +68,20 @@ export default function Dashboard() {
               <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
               <p className="text-sm text-muted-foreground">{stat.label}</p>
             </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Batch Breakdown */}
+      <div className="grid grid-cols-3 gap-3">
+        {batchStats.map((bs, i) => (
+          <div
+            key={bs.label}
+            className={`card-elevated p-4 border-l-4 ${bs.accent}`}
+            style={{ animation: `fade-up 0.6s cubic-bezier(0.16,1,0.3,1) ${360 + i * 60}ms forwards`, opacity: 0 }}
+          >
+            <p className="text-2xl font-bold tabular-nums">{bs.value}</p>
+            <p className="text-xs text-muted-foreground">{bs.label}</p>
           </div>
         ))}
       </div>
