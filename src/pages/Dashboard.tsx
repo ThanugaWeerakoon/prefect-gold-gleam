@@ -72,6 +72,20 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Batch Breakdown */}
+      <div className="grid grid-cols-3 gap-3">
+        {batchStats.map((bs, i) => (
+          <div
+            key={bs.label}
+            className={`card-elevated p-4 border-l-4 ${bs.accent}`}
+            style={{ animation: `fade-up 0.6s cubic-bezier(0.16,1,0.3,1) ${360 + i * 60}ms forwards`, opacity: 0 }}
+          >
+            <p className="text-2xl font-bold tabular-nums">{bs.value}</p>
+            <p className="text-xs text-muted-foreground">{bs.label}</p>
+          </div>
+        ))}
+
+
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link
