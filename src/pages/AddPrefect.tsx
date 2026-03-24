@@ -14,32 +14,36 @@ export default function AddPrefect() {
   const [batch, setBatch] = useState<Batch | ''>('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !prefectId.trim() || !batch) {
-      toast.error('Please fill in all fields');
-      return;
-    }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    setLoading(true);
-    try {
-      await addPrefect({
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        prefectId: prefectId.trim(),
-        batch: batch as Batch,
-      });
+  if (!name.trim() || !prefectId.trim() || !batch) {
+    toast.error('Please fill in all fields');
+    return;
+  }
 
-      toast.success(`${name} added as ${batch} Prefect`);
-      setName('');
-      setPrefectId('');
-      setBatch('');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to add prefect');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Ensure batch matches exactly one of DB values
+  const batchName = batch as 'Trainee' | 'Assistant' | 'Junior';
+
+  setLoading(true);
+  try {
+    await addPrefect({
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      prefectId: prefectId.trim(),
+      batch: batchName,
+    });
+
+    toast.success(`${name} added as ${batchName} Prefect`);
+    setName('');
+    setPrefectId('');
+    setBatch('');
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to add prefect');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="max-w-lg mx-auto space-y-8">

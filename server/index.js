@@ -10,7 +10,7 @@ app.use(express.json());
 const pool = mysql.createPool({
   host: 'localhost',
   user: 'root',
-  password: 'password',
+  password: '',
   database: 'acpg',
   port: 3306,
   waitForConnections: true,
