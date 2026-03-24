@@ -8,6 +8,7 @@ import AddPrefect from "./pages/AddPrefect";
 import DutyRecords from "./pages/DutyRecords";
 import Leaderboard from "./pages/Leaderboard";
 import Performance from "./pages/Performance";
+import Promotion from "./pages/Promotion";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/duties" element={<DutyRecords />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/performance" element={<Performance />} />
+            <Route path="/promotion" element={<Promotion />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>

@@ -10,8 +10,16 @@ export default function Dashboard() {
   const [duties, setDuties] = useState<DutyRecord[]>([]);
 
   useEffect(() => {
-    setPrefects(getPrefects());
-    setDuties(getDutyRecords());
+    async function load() {
+      try {
+        const [p, d] = await Promise.all([getPrefects(), getDutyRecords()]);
+        setPrefects(p);
+        setDuties(d);
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      }
+    }
+    load();
   }, []);
 
   const totalPoints = useMemo(() => duties.reduce((s, d) => s + d.points, 0), [duties]);

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, UserPlus, ClipboardList, Trophy, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, UserPlus, ClipboardList, Trophy, BarChart3, ArrowUpCircle } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/duties', label: 'Duties', icon: ClipboardList },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/performance', label: 'Performance', icon: BarChart3 },
+  { to: '/promotion', label: 'Promotion', icon: ArrowUpCircle },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

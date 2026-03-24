@@ -12,26 +12,33 @@ export default function AddPrefect() {
   const [name, setName] = useState('');
   const [prefectId, setPrefectId] = useState('');
   const [batch, setBatch] = useState<Batch | ''>('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !prefectId.trim() || !batch) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    addPrefect({
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      prefectId: prefectId.trim(),
-      batch: batch as Batch,
-      createdAt: new Date().toISOString(),
-    });
+    setLoading(true);
+    try {
+      await addPrefect({
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        prefectId: prefectId.trim(),
+        batch: batch as Batch,
+      });
 
-    toast.success(`${name} added as ${batch} Prefect`);
-    setName('');
-    setPrefectId('');
-    setBatch('');
+      toast.success(`${name} added as ${batch} Prefect`);
+      setName('');
+      setPrefectId('');
+      setBatch('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add prefect');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -70,9 +77,9 @@ export default function AddPrefect() {
           </Select>
         </div>
 
-        <Button type="submit" variant="gold" className="w-full active:scale-[0.97]">
+        <Button type="submit" variant="gold" className="w-full active:scale-[0.97]" disabled={loading}>
           <UserPlus className="h-4 w-4 mr-2" />
-          Add Prefect
+          {loading ? 'Adding...' : 'Add Prefect'}
         </Button>
       </form>
     </div>

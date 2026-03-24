@@ -1,10 +1,23 @@
-export type Batch = 'Trainee' | 'Assistant' | 'Junior';
+export type BatchName = 'Trainee' | 'Assistant' | 'Junior';
+
+// Keep backward-compatible alias
+export type Batch = BatchName;
+
+export interface AcademicYear {
+  id: number;
+  year: string;        // e.g. "2025/2026"
+  is_current: boolean;
+}
 
 export interface Prefect {
   id: string;
   name: string;
-  prefectId: string;
-  batch: Batch;
+  prefectId: string;       // display id e.g. "TP-001"  (mapped from prefect_id)
+  batch: BatchName;        // resolved batch name
+  batchId: number;
+  isActive: boolean;
+  academicYear: string;
+  yearId: number;
   createdAt: string;
 }
 
@@ -16,6 +29,7 @@ export interface DutyRecord {
   dutyType: DutyType;
   points: number;
   date: string;
+  yearId: number;
   createdAt: string;
 }
 
@@ -32,7 +46,7 @@ export const DAILY_DUTIES: DutyType[] = ['Attendance', 'Morning Duty', 'Evening 
 export const OCCASIONAL_DUTIES: DutyType[] = ['Special Duty', 'Phones Caught'];
 export const ALL_DUTIES: DutyType[] = [...DAILY_DUTIES, ...OCCASIONAL_DUTIES];
 
-export const BATCH_COLORS: Record<Batch, { bg: string; text: string; border: string }> = {
+export const BATCH_COLORS: Record<BatchName, { bg: string; text: string; border: string }> = {
   'Trainee': { bg: 'bg-white', text: 'text-foreground', border: 'border-gray-300' },
   'Assistant': { bg: 'bg-silver-light', text: 'text-foreground', border: 'border-silver' },
   'Junior': { bg: 'bg-maroon/10', text: 'text-maroon', border: 'border-maroon/30' },

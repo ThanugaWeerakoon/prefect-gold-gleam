@@ -13,8 +13,16 @@ export default function Performance() {
   const [selectedPrefect, setSelectedPrefect] = useState('');
 
   useEffect(() => {
-    setPrefects(getPrefects());
-    setRecords(getDutyRecords());
+    async function load() {
+      try {
+        const [p, d] = await Promise.all([getPrefects(), getDutyRecords()]);
+        setPrefects(p);
+        setRecords(d);
+      } catch (err) {
+        console.error('Failed to load performance data:', err);
+      }
+    }
+    load();
   }, []);
 
   const prefectRecords = useMemo(

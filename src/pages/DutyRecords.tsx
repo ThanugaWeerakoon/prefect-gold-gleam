@@ -16,13 +16,19 @@ export default function DutyRecords() {
   const [selectedPrefect, setSelectedPrefect] = useState('');
   const [selectedDuties, setSelectedDuties] = useState<DutyType[]>([]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [loading, setLoading] = useState(false);
 
-  const reload = () => {
-    setPrefects(getPrefects());
-    setRecords(getDutyRecords());
+  const reload = async () => {
+    try {
+      const [p, d] = await Promise.all([getPrefects(), getDutyRecords()]);
+      setPrefects(p);
+      setRecords(d);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+    }
   };
 
-  useEffect(reload, []);
+  useEffect(() => { reload(); }, []);
 
   const prefectRecords = useMemo(
     () => records.filter(r => r.prefectId === selectedPrefect).sort((a, b) => b.date.localeCompare(a.date)),
@@ -46,32 +52,42 @@ export default function DutyRecords() {
 
   const totalPreview = selectedDuties.reduce((s, d) => s + DUTY_POINTS[d], 0);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!selectedPrefect || selectedDuties.length === 0) {
       toast.error('Select a prefect and at least one duty');
       return;
     }
 
-    selectedDuties.forEach(duty => {
-      addDutyRecord({
-        id: crypto.randomUUID(),
-        prefectId: selectedPrefect,
-        dutyType: duty,
-        points: DUTY_POINTS[duty],
-        date,
-        createdAt: new Date().toISOString(),
-      });
-    });
+    setLoading(true);
+    try {
+      for (const duty of selectedDuties) {
+        await addDutyRecord({
+          id: crypto.randomUUID(),
+          prefectId: selectedPrefect,
+          dutyType: duty,
+          points: DUTY_POINTS[duty],
+          date,
+        });
+      }
 
-    toast.success(`${selectedDuties.length} duties recorded — ${totalPreview} pts total`);
-    setSelectedDuties([]);
-    reload();
+      toast.success(`${selectedDuties.length} duties recorded — ${totalPreview} pts total`);
+      setSelectedDuties([]);
+      await reload();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add duty records');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteDutyRecord(id);
-    toast.info('Record deleted');
-    reload();
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDutyRecord(id);
+      toast.info('Record deleted');
+      await reload();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete record');
+    }
   };
 
   const selectedPrefectObj = prefects.find(p => p.id === selectedPrefect);
@@ -180,11 +196,15 @@ export default function DutyRecords() {
                   onClick={handleAdd}
                   variant="gold"
                   className="w-full sm:w-auto active:scale-[0.97]"
-                  disabled={selectedDuties.length === 0}
+                  disabled={selectedDuties.length === 0 || loading}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Add {selectedDuties.length > 0 ? `${selectedDuties.length} ${selectedDuties.length === 1 ? 'Duty' : 'Duties'}` : 'Duties'}
-                  {totalPreview > 0 && ` (${totalPreview} pts)`}
+                  {loading ? 'Adding...' : (
+                    <>
+                      Add {selectedDuties.length > 0 ? `${selectedDuties.length} ${selectedDuties.length === 1 ? 'Duty' : 'Duties'}` : 'Duties'}
+                      {totalPreview > 0 && ` (${totalPreview} pts)`}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

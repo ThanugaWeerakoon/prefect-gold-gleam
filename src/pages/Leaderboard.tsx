@@ -20,8 +20,16 @@ export default function Leaderboard() {
   const [batchFilter, setBatchFilter] = useState<string>('all');
 
   useEffect(() => {
-    setPrefects(getPrefects());
-    setRecords(getDutyRecords());
+    async function load() {
+      try {
+        const [p, d] = await Promise.all([getPrefects(), getDutyRecords()]);
+        setPrefects(p);
+        setRecords(d);
+      } catch (err) {
+        console.error('Failed to load leaderboard data:', err);
+      }
+    }
+    load();
   }, []);
 
   const entries: LeaderboardEntry[] = useMemo(() => {
