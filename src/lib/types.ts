@@ -1,4 +1,4 @@
-export type BatchName = 'Trainee' | 'Assistant' | 'Junior';
+export type BatchName = 'Trainee' | 'Assistant' | 'Junior' | 'Temp Assistant' | 'Senior';
 
 // Keep backward-compatible alias
 export type Batch = BatchName;
@@ -50,4 +50,6 @@ export const BATCH_COLORS: Record<BatchName, { bg: string; text: string; border:
   'Trainee': { bg: 'bg-white', text: 'text-foreground', border: 'border-gray-300' },
   'Assistant': { bg: 'bg-silver-light', text: 'text-foreground', border: 'border-silver' },
   'Junior': { bg: 'bg-maroon/10', text: 'text-maroon', border: 'border-maroon/30' },
+  'Temp Assistant': { bg: 'bg-maroon/10', text: 'text-maroon', border: 'border-maroon/30' },
+  'Senior': { bg: 'bg-maroon/10', text: 'text-maroon', border: 'border-maroon/30' },
 };

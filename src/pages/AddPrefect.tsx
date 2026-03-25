@@ -23,7 +23,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 
   // Ensure batch matches exactly one of DB values
-  const batchName = batch as 'Trainee' | 'Assistant' | 'Junior';
+  const batchName = batch as 'Trainee' | 'Assistant' | 'Junior' | 'Temp Assistant' | 'Senior';
 
   setLoading(true);
   try {
@@ -77,6 +77,8 @@ const handleSubmit = async (e: React.FormEvent) => {
               <SelectItem value="Trainee">Trainee Prefect</SelectItem>
               <SelectItem value="Assistant">Assistant Prefect</SelectItem>
               <SelectItem value="Junior">Junior Prefect</SelectItem>
+              <SelectItem value="Temp Assistant">Temp Assistatant Prefect</SelectItem>
+              <SelectItem value="Senior">Senior Prefect</SelectItem>
             </SelectContent>
           </Select>
         </div>
