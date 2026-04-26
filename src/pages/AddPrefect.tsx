@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { addPrefect } from '@/lib/store';
-import { Batch } from '@/lib/types';
+import { Batch, BatchName } from '@/lib/types';
 import { toast } from 'sonner';
 import { UserPlus } from 'lucide-react';
 
@@ -12,6 +12,7 @@ export default function AddPrefect() {
   const [name, setName] = useState('');
   const [prefectId, setPrefectId] = useState('');
   const [batch, setBatch] = useState<Batch | ''>('');
+  const [rank, setRank] = useState('');
   const [loading, setLoading] = useState(false);
 
 const handleSubmit = async (e: React.FormEvent) => {
@@ -22,8 +23,14 @@ const handleSubmit = async (e: React.FormEvent) => {
     return;
   }
 
+  const rankNum = parseInt(rank);
+  if (!rank.trim() || isNaN(rankNum) || rankNum < 1) {
+    toast.error('Please enter a valid rank (1 or higher)');
+    return;
+  }
+
   // Ensure batch matches exactly one of DB values
-  const batchName = batch as 'Trainee' | 'Assistant' | 'Junior' | 'Temp Assistant' | 'Senior';
+  const batchName = batch as BatchName;
 
   setLoading(true);
   try {
@@ -32,12 +39,14 @@ const handleSubmit = async (e: React.FormEvent) => {
       name: name.trim(),
       prefectId: prefectId.trim(),
       batch: batchName,
+      rank: rankNum,
     });
 
-    toast.success(`${name} added as ${batchName} Prefect`);
+    toast.success(`${name} added as ${batchName} Prefect (Rank ${rankNum})`);
     setName('');
     setPrefectId('');
     setBatch('');
+    setRank('');
   } catch (err: any) {
     toast.error(err.message || 'Failed to add prefect');
   } finally {
@@ -67,20 +76,38 @@ const handleSubmit = async (e: React.FormEvent) => {
           <Input id="pid" value={prefectId} onChange={e => setPrefectId(e.target.value)} placeholder="e.g. TP-001" />
         </div>
 
-        <div className="space-y-2">
-          <Label>Batch</Label>
-          <Select value={batch} onValueChange={v => setBatch(v as Batch)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select batch" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Trainee">Trainee Prefect</SelectItem>
-              <SelectItem value="Assistant">Assistant Prefect</SelectItem>
-              <SelectItem value="Junior">Junior Prefect</SelectItem>
-              <SelectItem value="Temp Assistant">Temp Assistatant Prefect</SelectItem>
-              <SelectItem value="Senior">Senior Prefect</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Batch</Label>
+            <Select value={batch} onValueChange={v => setBatch(v as Batch)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select batch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Prefect Applicant">Prefect Applicant</SelectItem>
+                <SelectItem value="Trainee Prefect">Trainee Prefect</SelectItem>
+                <SelectItem value="Assistant Prefect (Probationary)">Assistant Prefect (Probationary)</SelectItem>
+                <SelectItem value="Assistant Prefect">Assistant Prefect</SelectItem>
+                <SelectItem value="Junior Prefect">Junior Prefect</SelectItem>
+                <SelectItem value="Senior Prefect">Senior Prefect</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="rank">Rank</Label>
+            <Input
+              id="rank"
+              type="number"
+              min={1}
+              value={rank}
+              onChange={e => setRank(e.target.value)}
+              placeholder="e.g. 1"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Rank 1 = highest priority during promotion
+            </p>
+          </div>
         </div>
 
         <Button type="submit" variant="gold" className="w-full active:scale-[0.97]" disabled={loading}>

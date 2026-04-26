@@ -1,58 +1,109 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getPrefects, getCurrentYear, getAcademicYears, bulkPromote } from '@/lib/store';
-import { Prefect, AcademicYear } from '@/lib/types';
+import {
+  getPrefects,
+  promoteBatch,
+  removeSeniorPrefects,
+} from '@/lib/store';
+import { Prefect, BatchName, TIER_ORDER } from '@/lib/types';
 import { BatchBadge } from '@/components/BatchBadge';
 import { toast } from 'sonner';
-import { ArrowUpCircle, GraduationCap, AlertTriangle } from 'lucide-react';
+import {
+  ArrowUpCircle,
+  Crown,
+  X,
+  UserX,
+  Users,
+  Trash2,
+  ShieldAlert,
+} from 'lucide-react';
+
+/** Promotion transitions — source → target */
+const PROMOTIONS: { source: BatchName; target: BatchName }[] = TIER_ORDER
+  .slice(0, -1)
+  .map((source, i) => ({ source, target: TIER_ORDER[i + 1] }));
+
+interface ActionModal {
+  source: BatchName;
+  target: BatchName;
+  list: Prefect[];
+}
 
 export default function Promotion() {
   const [prefects, setPrefects] = useState<Prefect[]>([]);
-  const [currentYear, setCurrentYear] = useState<AcademicYear | null>(null);
-  const [years, setYears] = useState<AcademicYear[]>([]);
-  const [newYear, setNewYear] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+
+  const [modal, setModal] = useState<ActionModal | null>(null);
+  const [promoteCount, setPromoteCount] = useState('');
+
+  // Confirmation modal for removing seniors
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   const load = async () => {
     try {
-      const [p, y, allYears] = await Promise.all([
-        getPrefects(),
-        getCurrentYear(),
-        getAcademicYears(),
-      ]);
+      const p = await getPrefects();
       setPrefects(p);
-      setCurrentYear(y);
-      setYears(allYears);
     } catch (err) {
       console.error('Failed to load promotion data:', err);
+      toast.error('Failed to load promotion data');
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
-  const trainees = prefects.filter(p => p.batch === 'Trainee');
-  const assistants = prefects.filter(p => p.batch === 'Assistant');
-  const juniors = prefects.filter(p => p.batch === 'Junior');
+  /** Group active prefects by tier */
+  const tierMap = useMemo(() => {
+    const map: Record<string, Prefect[]> = {};
+    TIER_ORDER.forEach(tier => {
+      map[tier] = prefects
+        .filter(p => p.batch === tier && p.isActive !== false)
+        .sort((a, b) => (a.rank || 0) - (b.rank || 0));
+    });
+    return map;
+  }, [prefects]);
+
+  const seniors = tierMap['Senior Prefect'] || [];
+
+  /* ─── Modal Handlers ──────────────────────── */
+
+  const openModal = (source: BatchName, target: BatchName, list: Prefect[]) => {
+    setModal({ source, target, list });
+    setPromoteCount('');
+  };
+
+  const closeModal = () => {
+    setModal(null);
+    setPromoteCount('');
+  };
 
   const handlePromote = async () => {
-    if (!newYear.trim()) {
-      toast.error('Enter the new academic year (e.g. 2026/2027)');
+    if (!modal) return;
+
+    const count = parseInt(promoteCount, 10);
+
+    if (Number.isNaN(count) || count < 0) {
+      toast.error('Enter a valid number');
       return;
     }
-    if (!/^\d{4}\/\d{4}$/.test(newYear.trim())) {
-      toast.error('Year must be in format YYYY/YYYY (e.g. 2026/2027)');
+
+    if (count > modal.list.length) {
+      toast.error(`Maximum promotable count is ${modal.list.length}`);
       return;
     }
 
     setLoading(true);
     try {
-      const result = await bulkPromote(newYear.trim());
+      const result = await promoteBatch(
+        modal.source,
+        modal.target,
+        count
+      );
       toast.success(result.message);
-      setShowConfirm(false);
-      setNewYear('');
+      closeModal();
       await load();
     } catch (err: any) {
       toast.error(err.message || 'Promotion failed');
@@ -61,143 +112,335 @@ export default function Promotion() {
     }
   };
 
+  const handleRemoveSeniors = async () => {
+    setLoading(true);
+    try {
+      const result = await removeSeniorPrefects();
+      toast.success(result.message);
+      setShowRemoveConfirm(false);
+      await load();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove senior prefects');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const parsedCount = parseInt(promoteCount, 10) || 0;
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      <div style={{ animation: 'fade-up 0.6s cubic-bezier(0.16,1,0.3,1) forwards' }}>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Promotion</h1>
+      <div
+        style={{
+          animation: 'fade-up 0.6s cubic-bezier(0.16,1,0.3,1) forwards'
+        }}
+      >
+        <h1 className="text-3xl font-display font-bold tracking-tight">
+          Promotion
+        </h1>
         <p className="text-muted-foreground mt-1">
-          Bulk promote all prefects to the next batch
+          Promote prefects through the tier ladder. Points are reset and ranks reassigned on each promotion.
         </p>
       </div>
 
-      {/* Current Year Info */}
-      <div
-        className="card-elevated p-6"
-        style={{ animation: 'fade-up 0.6s cubic-bezier(0.16,1,0.3,1) 100ms forwards', opacity: 0 }}
-      >
-        <h3 className="font-semibold mb-4">Current Academic Year</h3>
-        <p className="text-2xl font-bold text-gold-dark">
-          {currentYear?.year || 'Not set'}
-        </p>
-      </div>
+      {/* ── Tier Promotion Cards ────────────────── */}
+      {PROMOTIONS.map(({ source, target }, idx) => {
+        const list = tierMap[source] || [];
 
-      {/* Current Breakdown */}
-      <div
-        className="card-elevated p-6 space-y-4"
-        style={{ animation: 'fade-up 0.6s cubic-bezier(0.16,1,0.3,1) 200ms forwards', opacity: 0 }}
-      >
-        <h3 className="font-semibold">Current Batches</h3>
+        return (
+          <div
+            key={source}
+            className="card-elevated p-6 space-y-4"
+            style={{
+              animation: `fade-up 0.55s cubic-bezier(0.16,1,0.3,1) ${100 + idx * 80}ms forwards`,
+              opacity: 0
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-wrap">
+                <BatchBadge batch={source} />
+                <span className="text-sm text-muted-foreground">
+                  → <strong>{target}</strong>
+                </span>
+              </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-secondary/50">
-            <div className="flex items-center gap-3">
-              <BatchBadge batch="Trainee" />
-              <span className="text-sm text-muted-foreground">→ will become <strong>Assistant</strong></span>
-            </div>
-            <span className="font-bold tabular-nums">{trainees.length} prefects</span>
-          </div>
-
-          <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-secondary/50">
-            <div className="flex items-center gap-3">
-              <BatchBadge batch="Assistant" />
-              <span className="text-sm text-muted-foreground">→ will become <strong>Junior</strong></span>
-            </div>
-            <span className="font-bold tabular-nums">{assistants.length} prefects</span>
-          </div>
-
-          <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-secondary/50">
-            <div className="flex items-center gap-3">
-              <BatchBadge batch="Junior" />
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                → will <strong>graduate</strong> <GraduationCap className="h-4 w-4" />
+              <span className="font-bold tabular-nums text-sm">
+                {list.length} prefects
               </span>
             </div>
-            <span className="font-bold tabular-nums">{juniors.length} prefects</span>
+
+            {list.length > 0 ? (
+              <div className="space-y-1 pl-2 border-l-2 border-border max-h-48 overflow-y-auto">
+                {list.map((p, i) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-2 text-xs text-muted-foreground"
+                  >
+                    <Crown className="h-3 w-3 text-gold-dark shrink-0" />
+                    <span className="font-medium text-foreground">
+                      Rank {p.rank || i + 1}
+                    </span>
+                    <span>— {p.name}</span>
+                    <span className="opacity-60">({p.prefectId})</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                No active prefects in this tier
+              </p>
+            )}
+
+            {list.length > 0 && (
+              <Button
+                variant="gold"
+                className="w-full active:scale-[0.97]"
+                disabled={loading}
+                onClick={() => openModal(source, target, list)}
+              >
+                Promote {source}
+              </Button>
+            )}
           </div>
+        );
+      })}
+
+      {/* ── Remove Senior Prefects Card ─────────── */}
+      <div
+        className="card-elevated p-6 space-y-4 border-destructive/30"
+        style={{
+          animation: `fade-up 0.55s cubic-bezier(0.16,1,0.3,1) ${100 + PROMOTIONS.length * 80}ms forwards`,
+          opacity: 0
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <ShieldAlert className="h-5 w-5 text-destructive" />
+            <h3 className="font-semibold">Remove Senior Prefects</h3>
+          </div>
+          <span className="font-bold tabular-nums text-sm">
+            {seniors.length} seniors
+          </span>
         </div>
+
+        {seniors.length > 0 ? (
+          <div className="space-y-1 pl-2 border-l-2 border-destructive/30 max-h-48 overflow-y-auto">
+            {seniors.map((p, i) => (
+              <div
+                key={p.id}
+                className="flex items-center gap-2 text-xs text-muted-foreground"
+              >
+                <Crown className="h-3 w-3 text-gold-dark shrink-0" />
+                <span className="font-medium text-foreground">
+                  Rank {p.rank || i + 1}
+                </span>
+                <span>— {p.name}</span>
+                <span className="opacity-60">({p.prefectId})</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground italic">
+            No active senior prefects
+          </p>
+        )}
+
+        {seniors.length > 0 && (
+          <Button
+            variant="destructive"
+            className="w-full active:scale-[0.97]"
+            disabled={loading}
+            onClick={() => setShowRemoveConfirm(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Remove All Senior Prefects
+          </Button>
+        )}
       </div>
 
-      {/* Promotion Action */}
-      <div
-        className="card-elevated p-6 space-y-4"
-        style={{ animation: 'fade-up 0.6s cubic-bezier(0.16,1,0.3,1) 300ms forwards', opacity: 0 }}
-      >
-        <h3 className="font-semibold flex items-center gap-2">
-          <ArrowUpCircle className="h-5 w-5" />
-          Promote All Prefects
-        </h3>
-
-        {!showConfirm ? (
-          <Button
-            variant="gold"
-            className="w-full active:scale-[0.97]"
-            onClick={() => setShowConfirm(true)}
-            disabled={prefects.length === 0}
+      {/* ── Promote Modal ──────────────────────── */}
+      {modal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={closeModal}
+        >
+          <div
+            className="card-elevated p-6 w-full max-w-md mx-4 space-y-4"
+            onClick={e => e.stopPropagation()}
+            style={{
+              animation: 'fade-up 0.3s cubic-bezier(0.16,1,0.3,1) forwards'
+            }}
           >
-            Start Promotion Process
-          </Button>
-        ) : (
-          <div className="space-y-4 border-t border-border pt-4">
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-semibold text-destructive">This action cannot be undone!</p>
-                <ul className="mt-1 space-y-1 text-muted-foreground">
-                  <li>• {juniors.length} Junior prefect(s) will be <strong>graduated</strong></li>
-                  <li>• {assistants.length} Assistant prefect(s) → Junior</li>
-                  <li>• {trainees.length} Trainee prefect(s) → Assistant</li>
-                  <li>• Points will reset (new year, fresh leaderboard)</li>
-                </ul>
-              </div>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold flex items-center gap-2">
+                <ArrowUpCircle className="h-5 w-5" />
+                Promote {modal.source} → {modal.target}
+              </h3>
+
+              <button
+                onClick={closeModal}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
+            <p className="text-sm text-muted-foreground">
+              Enter how many prefects to promote. Top-ranked prefects will be
+              promoted, their <strong>points reset to 0</strong>, and they'll be
+              <strong> re-ranked</strong> by who had the most points. The rest
+              will be deactivated.
+            </p>
+
             <div className="space-y-2">
-              <Label>New Academic Year</Label>
+              <Label>
+                Number to Promote (out of {modal.list.length})
+              </Label>
               <Input
-                value={newYear}
-                onChange={e => setNewYear(e.target.value)}
-                placeholder="e.g. 2026/2027"
+                type="number"
+                min={0}
+                max={modal.list.length}
+                value={promoteCount}
+                onChange={e => setPromoteCount(e.target.value)}
+                placeholder={`0 – ${modal.list.length}`}
+                autoFocus
               />
             </div>
 
-            <div className="flex gap-3">
+            {promoteCount !== '' && (
+              <div className="flex items-center gap-4 text-sm">
+                <span className="flex items-center gap-1 text-green-600">
+                  <Users className="h-4 w-4" />
+                  {parsedCount} promote
+                </span>
+                <span className="flex items-center gap-1 text-destructive">
+                  <UserX className="h-4 w-4" />
+                  {Math.max(0, modal.list.length - parsedCount)} deactivate
+                </span>
+              </div>
+            )}
+
+            {promoteCount !== '' && modal.list.length > 0 && (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {modal.list.map((p, i) => {
+                  const willPromote = i < parsedCount;
+
+                  return (
+                    <div
+                      key={p.id}
+                      className={`flex items-center justify-between py-2 px-3 rounded-lg text-sm transition-colors ${
+                        willPromote
+                          ? 'bg-green-500/10 border border-green-500/20'
+                          : 'bg-destructive/10 border border-destructive/20 opacity-70'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-xs font-bold shrink-0">
+                          {p.rank || i + 1}
+                        </span>
+
+                        <div>
+                          <span className="font-medium">{p.name}</span>
+                          <span className="text-muted-foreground ml-2 text-xs">
+                            {p.prefectId}
+                          </span>
+                        </div>
+                      </div>
+
+                      {willPromote ? (
+                        <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                          <ArrowUpCircle className="h-3 w-3" />
+                          Promote
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium text-destructive flex items-center gap-1">
+                          <UserX className="h-3 w-3" />
+                          Deactivate
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
                 className="flex-1 active:scale-[0.97]"
-                onClick={() => { setShowConfirm(false); setNewYear(''); }}
+                onClick={closeModal}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                variant="gold"
+                className="flex-1 active:scale-[0.97]"
+                onClick={handlePromote}
+                disabled={
+                  loading ||
+                  promoteCount === '' ||
+                  parsedCount < 0
+                }
+              >
+                {loading ? 'Promoting...' : `Promote ${parsedCount}`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Remove Seniors Confirm Modal ───────── */}
+      {showRemoveConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowRemoveConfirm(false)}
+        >
+          <div
+            className="card-elevated p-6 w-full max-w-sm mx-4 space-y-4"
+            onClick={e => e.stopPropagation()}
+            style={{
+              animation: 'fade-up 0.3s cubic-bezier(0.16,1,0.3,1) forwards'
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold flex items-center gap-2 text-destructive">
+                <ShieldAlert className="h-5 w-5" />
+                Confirm Removal
+              </h3>
+              <button
+                onClick={() => setShowRemoveConfirm(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              This will <strong>deactivate</strong> all{' '}
+              <strong>{seniors.length}</strong> Senior Prefect(s). This action
+              cannot be undone.
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1 active:scale-[0.97]"
+                onClick={() => setShowRemoveConfirm(false)}
                 disabled={loading}
               >
                 Cancel
               </Button>
               <Button
-                variant="gold"
+                variant="destructive"
                 className="flex-1 active:scale-[0.97]"
-                onClick={handlePromote}
-                disabled={loading || !newYear.trim()}
+                onClick={handleRemoveSeniors}
+                disabled={loading}
               >
-                {loading ? 'Promoting...' : 'Confirm Promotion'}
+                {loading ? 'Removing...' : 'Remove All'}
               </Button>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Past Years */}
-      {years.length > 1 && (
-        <div
-          className="card-elevated p-6"
-          style={{ animation: 'fade-up 0.6s cubic-bezier(0.16,1,0.3,1) 400ms forwards', opacity: 0 }}
-        >
-          <h3 className="font-semibold mb-3">Academic Year History</h3>
-          <div className="space-y-1.5">
-            {years.map(y => (
-              <div key={y.id} className="flex items-center justify-between py-2 px-3 rounded bg-secondary/30 text-sm">
-                <span className="font-medium">{y.year}</span>
-                {y.is_current && (
-                  <span className="text-xs font-bold text-gold-dark">Current</span>
-                )}
-              </div>
-            ))}
           </div>
         </div>
       )}

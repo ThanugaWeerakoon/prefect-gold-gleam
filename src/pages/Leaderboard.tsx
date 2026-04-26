@@ -74,10 +74,13 @@ export default function Leaderboard() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Batches</SelectItem>
-              <SelectItem value="Trainee">Trainee Prefects</SelectItem>
-              <SelectItem value="Assistant">Assistant Prefects</SelectItem>
-              <SelectItem value="Junior">Junior Prefects</SelectItem>
+              <SelectItem value="all">All Tiers</SelectItem>
+              <SelectItem value="Prefect Applicant">Prefect Applicant</SelectItem>
+              <SelectItem value="Trainee Prefect">Trainee Prefect</SelectItem>
+              <SelectItem value="Assistant Prefect (Probationary)">Asst Prefect (Prob)</SelectItem>
+              <SelectItem value="Assistant Prefect">Assistant Prefect</SelectItem>
+              <SelectItem value="Junior Prefect">Junior Prefect</SelectItem>
+              <SelectItem value="Senior Prefect">Senior Prefect</SelectItem>
             </SelectContent>
           </Select>
           <Button

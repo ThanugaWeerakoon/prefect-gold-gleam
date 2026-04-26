@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Award, Trophy, ArrowRight } from 'lucide-react';
+import { Users, Trophy, ArrowRight } from 'lucide-react';
 import { getPrefects, getDutyRecords } from '@/lib/store';
 import { Prefect, DutyRecord } from '@/lib/types';
 import { BatchBadge } from '@/components/BatchBadge';
@@ -22,8 +22,6 @@ export default function Dashboard() {
     load();
   }, []);
 
-  const totalPoints = useMemo(() => duties.reduce((s, d) => s + d.points, 0), [duties]);
-
   const topPrefects = useMemo(() => {
     const map = new Map<string, number>();
     duties.forEach(d => map.set(d.prefectId, (map.get(d.prefectId) || 0) + d.points));
@@ -35,21 +33,26 @@ export default function Dashboard() {
   }, [prefects, duties]);
 
   const batchCounts = useMemo(() => ({
-    Trainee: prefects.filter(p => p.batch === 'Trainee').length,
-    Assistant: prefects.filter(p => p.batch === 'Assistant').length,
-    Junior: prefects.filter(p => p.batch === 'Junior').length,
+    'Prefect Applicant': prefects.filter(p => p.batch === 'Prefect Applicant').length,
+    'Trainee Prefect': prefects.filter(p => p.batch === 'Trainee Prefect').length,
+    'Asst (Prob)': prefects.filter(p => p.batch === 'Assistant Prefect (Probationary)').length,
+    'Assistant Prefect': prefects.filter(p => p.batch === 'Assistant Prefect').length,
+    'Junior Prefect': prefects.filter(p => p.batch === 'Junior Prefect').length,
+    'Senior Prefect': prefects.filter(p => p.batch === 'Senior Prefect').length,
   }), [prefects]);
 
   const stats = [
     { label: 'Total Prefects', value: prefects.length, icon: Users, color: 'text-primary' },
-    { label: 'Points Awarded', value: totalPoints.toLocaleString(), icon: Award, color: 'text-gold-dark' },
     { label: 'Duty Records', value: duties.length, icon: Trophy, color: 'text-maroon-light' },
   ];
 
   const batchStats = [
-    { label: 'Trainee Prefects', value: batchCounts.Trainee, accent: 'border-l-gray-400' },
-    { label: 'Assistant Prefects', value: batchCounts.Assistant, accent: 'border-l-silver' },
-    { label: 'Junior Prefects', value: batchCounts.Junior, accent: 'border-l-maroon' },
+    { label: 'Applicants',    value: batchCounts['Prefect Applicant'], accent: 'border-l-slate-400' },
+    { label: 'Trainees',      value: batchCounts['Trainee Prefect'],   accent: 'border-l-gray-400' },
+    { label: 'Asst (Prob)',   value: batchCounts['Asst (Prob)'],       accent: 'border-l-amber-400' },
+    { label: 'Assistants',    value: batchCounts['Assistant Prefect'],  accent: 'border-l-silver' },
+    { label: 'Juniors',       value: batchCounts['Junior Prefect'],     accent: 'border-l-maroon' },
+    { label: 'Seniors',       value: batchCounts['Senior Prefect'],     accent: 'border-l-gold' },
   ];
 
   return (
@@ -58,11 +61,11 @@ export default function Dashboard() {
         <h1 className="text-3xl md:text-4xl font-display font-bold tracking-tight">
           Dashboard
         </h1>
-        <p className="text-muted-foreground mt-1">Ananda College Prefects' Guild — Points Overview</p>
+        <p className="text-muted-foreground mt-1">Ananda College Prefects' Guild — Overview</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Stats — 2 columns now (Points Awarded removed) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {stats.map((stat, i) => (
           <div
             key={stat.label}
@@ -81,7 +84,7 @@ export default function Dashboard() {
       </div>
 
       {/* Batch Breakdown */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {batchStats.map((bs, i) => (
           <div
             key={bs.label}

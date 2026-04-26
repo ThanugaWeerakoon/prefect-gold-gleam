@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS academic_years (
 -- Batches linked to academic years
 CREATE TABLE IF NOT EXISTS batches (
   id          INT           PRIMARY KEY AUTO_INCREMENT,
-  name        ENUM('Trainee', 'Assistant', 'Junior') NOT NULL,
+  name        VARCHAR(50)   NOT NULL,
   year_id     INT           NOT NULL,
   FOREIGN KEY (year_id) REFERENCES academic_years(id),
   UNIQUE(name, year_id)
@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS prefects (
   name        VARCHAR(100)  NOT NULL,
   prefect_id  VARCHAR(20)   NOT NULL UNIQUE,
   batch_id    INT           NOT NULL,
+  `rank`      INT           NOT NULL DEFAULT 0,
   is_active   BOOLEAN       NOT NULL DEFAULT TRUE,
   created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (batch_id) REFERENCES batches(id)
@@ -48,8 +49,11 @@ CREATE TABLE IF NOT EXISTS duty_records (
 -- Seed current academic year
 INSERT IGNORE INTO academic_years (year, is_current) VALUES ('2025/2026', TRUE);
 
--- Seed batches for current year
+-- Seed all 6 tier batches for current year
 INSERT IGNORE INTO batches (name, year_id) VALUES
-  ('Trainee', (SELECT id FROM academic_years WHERE year = '2025/2026')),
-  ('Assistant', (SELECT id FROM academic_years WHERE year = '2025/2026')),
-  ('Junior', (SELECT id FROM academic_years WHERE year = '2025/2026'));
+  ('Prefect Applicant',                (SELECT id FROM academic_years WHERE year = '2025/2026')),
+  ('Trainee Prefect',                  (SELECT id FROM academic_years WHERE year = '2025/2026')),
+  ('Assistant Prefect (Probationary)', (SELECT id FROM academic_years WHERE year = '2025/2026')),
+  ('Assistant Prefect',                (SELECT id FROM academic_years WHERE year = '2025/2026')),
+  ('Junior Prefect',                   (SELECT id FROM academic_years WHERE year = '2025/2026')),
+  ('Senior Prefect',                   (SELECT id FROM academic_years WHERE year = '2025/2026'));

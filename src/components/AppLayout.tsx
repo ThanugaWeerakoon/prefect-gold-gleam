@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, UserPlus, ClipboardList, Trophy, BarChart3, ArrowUpCircle } from 'lucide-react';
+import { LayoutDashboard, UserPlus, ClipboardList, Trophy, BarChart3, ArrowUpCircle, LogOut } from 'lucide-react';
+import { logout } from '@/lib/store';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -10,8 +11,18 @@ const navItems = [
   { to: '/promotion', label: 'Promotion', icon: ArrowUpCircle },
 ];
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+interface AppLayoutProps {
+  children: React.ReactNode;
+  onLogout?: () => void;
+}
+
+export default function AppLayout({ children, onLogout }: AppLayoutProps) {
   const { pathname } = useLocation();
+
+  const handleLogout = async () => {
+    await logout();
+    onLogout?.();
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,22 +39,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map(({ to, label, icon: Icon }) => (
-              <Link
-                key={to}
-                to={to}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                  pathname === to
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <div className="hidden md:flex items-center gap-1">
+            <nav className="flex items-center gap-1">
+              {navItems.map(({ to, label, icon: Icon }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    pathname === to
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              ))}
+            </nav>
+            <div className="w-px h-8 bg-border mx-2" />
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors duration-200"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -62,6 +84,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {label}
             </Link>
           ))}
+          <button
+            onClick={handleLogout}
+            className="flex flex-col items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+            Logout
+          </button>
         </div>
       </nav>
 
